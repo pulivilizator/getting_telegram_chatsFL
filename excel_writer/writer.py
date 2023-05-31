@@ -35,7 +35,7 @@ class ExcelWriter:
             raise GetFileException
         return rows
 
-    async def writer(self, rows) -> None:
+    async def writer(self, row) -> None:
         try:
             config = configparser.ConfigParser()
             config.read('config.ini', encoding='utf-8')
@@ -43,8 +43,7 @@ class ExcelWriter:
             workbook = openpyxl.load_workbook(road)
 
             worksheet = workbook.active
-            async for row in rows:
-                worksheet.append(row)
+            worksheet.append(row)
             workbook.save(road)
         except FileNotFoundError:
             print(f'WriteFileExeption: {WriteFileException.__doc__}')
