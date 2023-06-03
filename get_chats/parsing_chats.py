@@ -1,8 +1,7 @@
 import time
-
 from pyrogram import Client
 from get_chats.handlers import _chek_entities, _pattern, _main_handler
-from pyrogram.errors import FloodWait, MsgIdInvalid
+from pyrogram.errors import FloodWait, MsgIdInvalid, RPCError
 import asyncio
 from excel_writer.writer import writer
 from config.config import get_config
@@ -45,10 +44,13 @@ async def _get_messages(app: Client, settings: configparser.ConfigParser, chat, 
                     links.add(k)
     c = 0
     for link in links:
-        time.sleep(settings.getint('program', 'wait'))
-        c += 1
-        print(f'{c} из {len(links)} ссылок проверено')
-        await _main_handler(app, link, final_chats, settings)
+        try:
+            time.sleep(settings.getint('program', 'wait'))
+            c += 1
+            print(f'{c} из {len(links)} ссылок проверено')
+            await _main_handler(app, link, final_chats, settings)
+        except Exception:
+            continue
 
     for m in final_chats:
         if chat not in m[0]:
@@ -62,7 +64,14 @@ def main():
     settings.read('config.ini')
     chats = writer.get_rows()
     config = get_config(settings.get('program', 'env'))
-    app = Client('session', api_id=config.api_id, api_hash=config.api_hash)
+    proxy = {
+        "scheme": "socks5",  # "socks4", "socks5" and "http" are supported
+        "hostname": "194.28.210.240",
+        "port": 9111,
+        "username": "o4tdKM",
+        "password": "NPSzJu"
+    }
+    app = Client('session', api_id=config.api_id, api_hash=config.api_hash, proxy=proxy)
     with app:
         for chat in chats:
             links = set()

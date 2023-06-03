@@ -27,7 +27,7 @@ async def _main_handler(app: Client, chat, final_chats, settings: configparser.C
             counter = await _chat_check_members(app, chat, chat_type)
             if counter and counter >= 100:
                 final_chats.append([f'https://t.me/{chat}', counter, max(lang_dict.items(), key=lambda x: x[1])[0], ])
-    except (MsgIdInvalid, UsernameNotOccupied, ValueError, UsernameInvalid, LangDetectException):
+    except (MsgIdInvalid, UsernameNotOccupied, ValueError, UsernameInvalid, LangDetectException) as ex:
         return -1
     except FloodWait as wait:
         print(f'FlooWait: {wait.value} сек')
@@ -49,6 +49,7 @@ async def _chat_check_members(app: Client, chat: str, chat_type: str):
             return count.members_count
     except ChatAdminRequired:
         return 'Нет доступа'
+
 def _pattern(text):
     return list(map(lambda x: x.group(), re.finditer(r'\bhttps://t\.me/(joinchat/)?.{4,}?\b', text)))
 
