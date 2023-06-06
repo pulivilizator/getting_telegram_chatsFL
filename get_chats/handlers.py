@@ -1,5 +1,5 @@
 import configparser
-import time
+import asyncio
 from langdetect import detect
 from collections import defaultdict
 from langdetect.lang_detect_exception import LangDetectException
@@ -8,7 +8,7 @@ from pyrogram.types.messages_and_media.message import Message
 from pyrogram.errors import FloodWait, MsgIdInvalid, UsernameNotOccupied, UsernameInvalid, ChatAdminRequired
 import re
 
-async def _main_handler(app: Client, chat, final_chats, settings: configparser.ConfigParser):
+async def _main_handler(app: Client, chat, final_chats):
     global chat_type
     lang_dict = defaultdict(int)
     c = 0
@@ -27,13 +27,8 @@ async def _main_handler(app: Client, chat, final_chats, settings: configparser.C
             counter = await _chat_check_members(app, chat, chat_type)
             if counter and counter >= 100:
                 final_chats.append([f'https://t.me/{chat}', counter, max(lang_dict.items(), key=lambda x: x[1])[0], ])
-    except (MsgIdInvalid, UsernameNotOccupied, ValueError, UsernameInvalid, LangDetectException) as ex:
+    except (MsgIdInvalid, UsernameNotOccupied, ValueError, UsernameInvalid, LangDetectException):
         return -1
-    except FloodWait as wait:
-        print(f'FlooWait: {wait.value} сек')
-        time.sleep(wait.value)
-        wait_now = settings.getint('program', 'wait')
-        settings.set('program', 'wait', str(wait_now + 1))
 
 
 async def _chat_check_members(app: Client, chat: str, chat_type: str):

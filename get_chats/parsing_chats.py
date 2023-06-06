@@ -1,15 +1,16 @@
-import time
 from pyrogram import Client
-from get_chats.handlers import _chek_entities, _pattern, _main_handler
-from pyrogram.errors import FloodWait, MsgIdInvalid, RPCError
+from pyrogram.errors import FloodWait, MsgIdInvalid
+
 import asyncio
-from excel_writer.writer import writer
-from config.config import get_config
 import configparser
 import re
+from itertools import cycle
+
+from get_chats.handlers import _chek_entities, _pattern, _main_handler
+from excel_writer.writer import writer
 
 
-async def _get_messages(app: Client, settings: configparser.ConfigParser, chat, links, final_chats):
+async def _get_messages(app: Client, settings: configparser.ConfigParser, chat, links):
     counter = settings.getint('program', 'message_count')
 
     async def async_generator():
@@ -42,38 +43,50 @@ async def _get_messages(app: Client, settings: configparser.ConfigParser, chat, 
             for k in re.sub(r'(https://t\.me/(joinchat/)?(.+?))+', r' \3', ''.join(i)).split():
                 if k[0] != '+':
                     links.add(k)
-    c = 0
-    for link in links:
-        try:
-            time.sleep(settings.getint('program', 'wait'))
-            c += 1
-            print(f'{c} из {len(links)} ссылок проверено')
-            await _main_handler(app, link, final_chats, settings)
-        except Exception:
-            continue
-
-    for m in final_chats:
-        if chat not in m[0]:
-            await writer.writer(m)
-    settings.set('program', 'wait', '3')
 
 
-def main():
+async def main():
+    apps = cycle([Client(f'session_{i}') for i in range(1, 6)])
     writer.create_file()
     settings = configparser.ConfigParser()
-    settings.read('config.ini')
+    settings.read('config.ini', encoding='utf-8')
     chats = writer.get_rows()
-    config = get_config(settings.get('program', 'env'))
-    proxy = {
-        "scheme": "socks5",  # "socks4", "socks5" and "http" are supported
-        "hostname": "194.28.210.240",
-        "port": 9111,
-        "username": "o4tdKM",
-        "password": "NPSzJu"
-    }
-    app = Client('session', api_id=config.api_id, api_hash=config.api_hash, proxy=proxy)
-    with app:
-        for chat in chats:
-            links = set()
-            final_chats = []
-            app.run(_get_messages(app, settings, chat, links, final_chats))
+    for chat in ['birzha_reklamy3',
+                 'ozerkivrn',
+                 'travelask_all_chats',
+                 'jesusavgntwitch',
+                 'nats_py',
+                 'moikanaly2022',
+                 'python_parsing',
+                 'aiogram_dialog',
+                 'kanaly',
+                 ]:  # chats:
+        links = set()
+        final_chats = []
+        app = next(apps)
+        try:
+            await app.start()
+        except ConnectionError:
+            pass
+        await _get_messages(app, settings, chat, links)
+        c = 0
+        for link in links:
+            try:
+                print(app)
+                await asyncio.sleep(settings.getint('program', 'wait'))
+                c += 1
+                print(f'{c} из {len(links)} ссылок проверено')
+
+                await _main_handler(app, link, final_chats)
+            except FloodWait as wait:
+                print(f'FlooWait: {wait.value} сек')
+                await app.stop()
+                app = next(apps)
+                await app.start()
+                print('Меняю аккаунт')
+                if wait.value < 100:
+                    await asyncio.sleep(wait.value)
+
+        for m in final_chats:
+            if chat not in m[0]:
+                await writer.writer(m)
