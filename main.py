@@ -14,5 +14,6 @@ if __name__ == '__main__':
     try:
         asyncio.run(main())
     except Exception as ex:
-        print('ERROR', ex)
-    while True: time.sleep(5000)
+        print(ex)
+    print('Сбор данных зевершен')
+    time.sleep(50000)

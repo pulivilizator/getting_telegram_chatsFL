@@ -14,8 +14,8 @@ class ExcelWriter:
         workbook = openpyxl.Workbook()
         worksheet = workbook.active
         worksheet.append(
-            ['Чат', 'Количество участников', 'Регион'])
-        worksheet.auto_filter.ref = 'A1:C1'
+            ['Чат', 'Количество участников', 'Регион', 'Вид', 'Исходный чат'])
+        worksheet.auto_filter.ref = 'A1:E1'
         workbook.save(road)
         print(f'Создан файл по пути {road}')
 
@@ -43,7 +43,8 @@ class ExcelWriter:
             workbook = openpyxl.load_workbook(road)
 
             worksheet = workbook.active
-            worksheet.append(row)
+            for i in row:
+                worksheet.append(i)
             workbook.save(road)
         except FileNotFoundError:
             print(f'WriteFileExeption: {WriteFileException.__doc__}')

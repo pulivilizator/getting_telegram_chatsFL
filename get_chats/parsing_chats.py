@@ -1,5 +1,5 @@
 from pyrogram import Client
-from pyrogram.errors import FloodWait, MsgIdInvalid
+from pyrogram.errors import FloodWait, MsgIdInvalid, RPCError
 
 import asyncio
 import configparser
@@ -46,47 +46,45 @@ async def _get_messages(app: Client, settings: configparser.ConfigParser, chat, 
 
 
 async def main():
-    apps = cycle([Client(f'session_{i}') for i in range(1, 6)])
     writer.create_file()
     settings = configparser.ConfigParser()
     settings.read('config.ini', encoding='utf-8')
+    apps = cycle([(Client(f'session_{i}'), i) for i in range(1, settings.getint('program', 'sessions'))])
     chats = writer.get_rows()
-    for chat in ['birzha_reklamy3',
-                 'ozerkivrn',
-                 'travelask_all_chats',
-                 'jesusavgntwitch',
-                 'nats_py',
-                 'moikanaly2022',
-                 'python_parsing',
-                 'aiogram_dialog',
-                 'kanaly',
-                 ]:  # chats:
+    for chat in chats:
         links = set()
-        final_chats = []
-        app = next(apps)
+        final_chats = set()
+        app, num = next(apps)
         try:
             await app.start()
         except ConnectionError:
             pass
-        await _get_messages(app, settings, chat, links)
+        try:
+            await _get_messages(app, settings, chat, links)
+        except (RPCError, KeyError, ValueError, ConnectionError):
+            continue
         c = 0
         for link in links:
             try:
-                print(app)
-                await asyncio.sleep(settings.getint('program', 'wait'))
+                if len(final_chats) >= 100:
+                    await writer.writer(final_chats)
+                print(f'{num} - № аккаунта')
                 c += 1
                 print(f'{c} из {len(links)} ссылок проверено')
 
-                await _main_handler(app, link, final_chats)
+                await _main_handler(app, link, final_chats, chat)
+                if settings.getboolean('program', 'waiter'):
+                    await asyncio.sleep(settings.getint('program', 'wait'))
             except FloodWait as wait:
                 print(f'FlooWait: {wait.value} сек')
                 await app.stop()
-                app = next(apps)
-                await app.start()
-                print('Меняю аккаунт')
-                if wait.value < 100:
-                    await asyncio.sleep(wait.value)
+                app, num = next(apps)
+                try:
+                    await app.start()
+                    print('Меняю аккаунт')
+                except:
+                    pass
+            except (RPCError, KeyError, ValueError, ConnectionError):
+                continue
 
-        for m in final_chats:
-            if chat not in m[0]:
-                await writer.writer(m)
+        await writer.writer(final_chats)
